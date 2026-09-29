@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file.
 
 - Added `sandbox.max_age`, which removes sandboxes older than the age you set (for example `"30d"`) at every launch. Sandboxes left behind by e2e runs and throwaway projects no longer pile up, and the one you launch into is recreated empty once per period, so mise installs and caches in its overlay stop growing without bound. Sandboxes in use, holding a `--worktree` checkout, or on the Docker backend are kept. The key is read from the global config only. See [Automatic Expiry](docs/sandboxing.md#automatic-expiry).
 
+### Fixed
+
+- Launching a sandbox on a host with oh-my-zsh no longer aborts with `builder: ambiguous mount` (or a duplicate mount point on Docker). Both the `oh-my-zsh` and `shell-zsh` tools mounted `~/.oh-my-zsh`, and the second mount panicked before the workload started. The `oh-my-zsh` tool now mounts the framework alone, which also makes `[tools.oh-my-zsh] mount_mode = "disabled"` actually hide it instead of `shell-zsh` mounting it anyway.
+
 ## [v0.22.0](https://github.com/zekker6/devsandbox/releases/tag/v0.22.0) - 2026-09-17
 
 ### Added

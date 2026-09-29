@@ -106,8 +106,10 @@ func (z *Zsh) Bindings(homeDir, sandboxHome string) []Binding {
 		{Source: filepath.Join(homeDir, ".zshenv"), Category: CategoryConfig, Optional: true},
 		{Source: filepath.Join(homeDir, ".zprofile"), Category: CategoryConfig, Optional: true},
 		{Source: filepath.Join(homeDir, ".config", "zsh"), Category: CategoryConfig, Optional: true},
-		// Oh-my-zsh
-		{Source: filepath.Join(homeDir, ".oh-my-zsh"), Category: CategoryData, Optional: true},
+		// ~/.oh-my-zsh is owned by the dedicated oh-my-zsh tool, which also
+		// mounts its sandbox custom directory there. Declaring it here too is a
+		// second mount of the same destination, which trackMount refuses with an
+		// "ambiguous mount" panic before the workload starts.
 		{Source: filepath.Join(homeDir, ".local", "share", "zsh"), Category: CategoryData, Optional: true},
 	}
 }

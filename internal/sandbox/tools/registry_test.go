@@ -135,6 +135,32 @@ func TestRegistry_NoWritableBindUnderHostHome(t *testing.T) {
 	}
 }
 
+// TestRegistry_NoDuplicateBindingDest pins that no two tools claim the same
+// mount destination. The builder applies every available tool's bindings in
+// sequence, and a destination claimed twice is a trackMount panic on bwrap and a
+// "Duplicate mount point" error on Docker - which is how oh-my-zsh and shell-zsh
+// both declaring ~/.oh-my-zsh reached a launch failure.
+func TestRegistry_NoDuplicateBindingDest(t *testing.T) {
+	tmp := t.TempDir()
+	homeDir := filepath.Join(tmp, "home")
+	sandboxHome := filepath.Join(homeDir, ".local", "share", "devsandbox", "project-0123abcd", "home")
+	if err := os.MkdirAll(sandboxHome, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	owner := map[string]string{}
+	for _, tool := range All() {
+		for _, b := range tool.Bindings(homeDir, sandboxHome) {
+			dest := bindingDest(b)
+			if prev, ok := owner[dest]; ok {
+				t.Errorf("%s and %s both bind %s", prev, tool.Name(), dest)
+				continue
+			}
+			owner[dest] = tool.Name()
+		}
+	}
+}
+
 // underDir reports whether path is dir or lexically inside it.
 func underDir(dir, path string) bool {
 	rel, err := filepath.Rel(dir, path)

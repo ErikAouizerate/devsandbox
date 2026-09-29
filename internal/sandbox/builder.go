@@ -473,13 +473,40 @@ func (b *Builder) AddLocaleBindings() *Builder {
 }
 
 func (b *Builder) AddCABindings() *Builder {
-	caPaths := []string{
+	return b.addCABindings([]string{
 		"/etc/ca-certificates",
 		"/etc/pki/tls/certs",
 		"/etc/ssl/certs",
-	}
+	})
+}
 
+// addCABindings binds each CA directory read-only.
+//
+// A path whose final component is a symlink is bound at what it points to
+// instead: bubblewrap refuses to mount over a symlink destination ("Can't mount
+// on symlink destination"), and the symlink is already visible in the sandbox
+// through its parent bind - AddNetworkBindings binds /etc/ssl whole. On Fedora,
+// /etc/ssl/certs points at /etc/pki/tls/certs, which is in the list above, so the
+// resolved mount is both the one that keeps the link from dangling and a
+// duplicate the target's own entry already covers.
+func (b *Builder) addCABindings(caPaths []string) *Builder {
+	applied := make(map[string]bool, len(caPaths))
 	for _, p := range caPaths {
+		info, err := os.Lstat(p)
+		if err != nil {
+			continue
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			resolved, err := resolveMountRulePath(p)
+			if err != nil {
+				continue
+			}
+			p = resolved
+		}
+		if applied[p] {
+			continue
+		}
+		applied[p] = true
 		b.ROBindIfExists(p, p)
 	}
 

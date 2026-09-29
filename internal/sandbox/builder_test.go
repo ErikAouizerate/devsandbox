@@ -1126,6 +1126,39 @@ func TestAddTools_PropagatesLaunchedAgent(t *testing.T) {
 	}
 }
 
+// TestAddTools_OhMyZshMountedOnce pins that ~/.oh-my-zsh reaches the sandbox
+// exactly once. Both the oh-my-zsh tool and shell-zsh declared it, and on a host
+// where both are available - ~/.oh-my-zsh plus any zsh config - AddTools applied
+// each binding and trackMount panicked with "ambiguous mount" before the
+// workload ever started.
+func TestAddTools_OhMyZshMountedOnce(t *testing.T) {
+	home := t.TempDir()
+	sandboxHome := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(home, ".oh-my-zsh", "custom"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(home, ".zshrc"), nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	b := NewBuilder(&Config{
+		HomeDir:     home,
+		SandboxHome: sandboxHome,
+		ProjectDir:  t.TempDir(),
+	}).AddTools()
+
+	dest := filepath.Join(home, ".oh-my-zsh")
+	mounted := 0
+	for _, m := range b.mounts {
+		if m.dest == dest {
+			mounted++
+		}
+	}
+	if mounted != 1 {
+		t.Fatalf("%s mounted %d times, want 1", dest, mounted)
+	}
+}
+
 // TestResolveBindingType_CodexSessionsArePersistent proves the split the Codex
 // tool declares survives mount-mode resolution under the default policy: the
 // session records `codex resume <id>` reads get a persistent overlay, while the
